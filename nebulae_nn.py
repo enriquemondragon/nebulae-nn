@@ -6,6 +6,7 @@ import argparse
 import os
 import sys
 from PIL import Image
+import pandas as pd
 from nn_math_utils import *
  
 def read_data(data_path):
@@ -58,6 +59,13 @@ def read_data(data_path):
 
     return dataset
 
+def read_labels(labels_file):
+    '''
+    Extracting label values
+    '''
+    labels = pd.read_csv(labels_file).values
+    Y = np.array(labels[:,1])
+    return Y
 
 def define_layers_prop(dataset, layers_dim, activation):
     '''
@@ -97,26 +105,41 @@ def forward_prop(X, params, dim_layers, activation):
     for l in range(1, len(dim_layers)):
         A_prev = A
         Z = linear_forward(A_prev,params['W' + str(l)], params['b' + str(l)]) # STORE LINEAR CACHE TD
-        if activation[l]=='sigmoid': # STORE ACTIVATION TD
+        #print(Z)
+        if activation[l-1]=='sigmoid':
             A = sigmoid(Z)
-        elif activation[l]=='relu':
+        elif activation[l-1]=='relu':
             A = relu(Z)
-        elif activation[l]=='tanh':
+        elif activation[l-1]=='tanh':
             A = tanh(Z)
-    return
+    return A
         
+def cost(A,Y):
+    m = Y.shape[0]
+    print(m)
+    C = np.squeeze(binary_cross_entropy(m,A,Y))
+    return C
 
 def main():
     parser = argparse.ArgumentParser(description=' ################ Nebulae NN ################', usage='%(prog)s')
-    parser.add_argument('-in', '--input', type=str, required=True, help='dataset path', dest='data_path')
+    parser.add_argument('-ind', '--input_data', type=str, required=True, help='dataset path', dest='data_path')
+    parser.add_argument('-lb', '--labels', type=str, required=True, help='labels csv file', dest='labels_file')
     parser.add_argument('-dim', '--dim_layers', action='store', nargs='+', default=[16,8,1], type=int, help='dim of layers separated with spaces', dest='dim_layers')
     parser.add_argument('-act', '--activation', type=str, choices=['sigmoid', 'relu', 'tanh'], default='relu', dest='activation', help='select activation function for inner layers [sigmoid, relu, tanh]')
     args = parser.parse_args()
 
-    data_path = args.data_path
-    dataset = read_data(data_path)
-    dim_layers, params, activations = define_layers_prop(dataset, args.dim_layers, args.activation)
+    print('\n\t',parser.description)
+    dataset = read_data(args.data_path)
+    Y = read_labels(args.labels_file)
+    print(Y)
+    assert len(Y)==dataset.shape[1], 'Number of samples does not match with number of labels'
 
+    dim_layers, params, activations = define_layers_prop(dataset, args.dim_layers, args.activation)
+    X = dataset # split in future
+    A = forward_prop(X, params, dim_layers, activations)
+    print(A)
+    C = cost(A,Y)
+    print(C)
 
 if __name__ == "__main__":
 

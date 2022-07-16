@@ -24,3 +24,10 @@ def linear_forward(A,W, b):
     Z = W @ A + b
     #STORE A,W,B TD
     return Z
+
+def binary_cross_entropy(m,A,Y):
+    C= 1./m * -(Y @ np.log(A).T) - (1-Y) @ (np.log(1-A).T)
+    return C
+
+
+    
