@@ -102,23 +102,51 @@ def define_layers_prop(dataset, layers_dim, activation):
 
 def forward_prop(X, params, dim_layers, activation):
     A = X
+    cache = {}
+    cache['A' + str(0)] = A
     for l in range(1, len(dim_layers)):
         A_prev = A
-        Z = linear_forward(A_prev,params['W' + str(l)], params['b' + str(l)]) # STORE LINEAR CACHE TD
+        
+        Z = linear_forward(A_prev,params['W' + str(l)], params['b' + str(l)])
+        #print("layer", l, "params: ", params['W' + str(l)], params['b' + str(l)])
+        cache['Z' + str(l)] = Z
         #print(Z)
+        #print(l)
         if activation[l-1]=='sigmoid':
             A = sigmoid(Z)
         elif activation[l-1]=='relu':
             A = relu(Z)
         elif activation[l-1]=='tanh':
             A = tanh(Z)
-    return A
+        cache['A' + str(l)] = A
+    return A, cache
         
 def cost(A,Y):
+    '''
+    Compute the cost of the loss function
+    '''
     m = Y.shape[0]
-    print(m)
+    #print(m)
     C = np.squeeze(binary_cross_entropy(m,A,Y))
     return C
+
+def backward_prop(A,Y, cache, params):
+    '''
+    Computes the Jacobians elements of the loss function
+    '''
+    grads = {}
+    L = round((len(cache)-1)/2)
+    print(L)
+    dCdA = d_binary_cross_entropy(cache['A'+str(L)],Y)
+    dAdZ = d_sigmoid(cache['Z'+str(L)])
+    dCdZ = dCdA * dAdZ
+    #print("shapes dcdz and daprev", dCdZ.shape, cache['A'+str(L-1)].shape)
+    dA_prev, dCdW, dCdb = linear_backward(dCdZ,cache['A'+str(L-1)], params['W' + str(L)], params['b' + str(L)]) # I will use params, CHECK
+    grads["dA" + str(L-1)], grads["dW" + str(L)], grads["db" + str(L)] = dA_prev, dCdW, dCdb
+
+    #d_sigmoid(X)
+    #dZ = relu_backward(dA, activation_cache)
+    return dCdA,dCdZ,dCdW,dCdb,dA_prev,grads
 
 def main():
     parser = argparse.ArgumentParser(description=' ################ Nebulae NN ################', usage='%(prog)s')
@@ -135,11 +163,24 @@ def main():
     assert len(Y)==dataset.shape[1], 'Number of samples does not match with number of labels'
 
     dim_layers, params, activations = define_layers_prop(dataset, args.dim_layers, args.activation)
+    #print("params keys are: ", params.keys())
     X = dataset # split in future
-    A = forward_prop(X, params, dim_layers, activations)
-    print(A)
+    A, cache = forward_prop(X, params, dim_layers, activations)
+    #print(A)
+    print(cache.keys())
+    #print(cache)
+    #print(params)
     C = cost(A,Y)
     print(C)
+    #print("A IS", A)
+    #print("A CACHE IS", cache['A3'])
+    dCdA,dCdZ,dCdW, dCdb,dA_prev, grads = backward_prop(A,Y,cache, params)
+    print(dCdA)
+    print(dCdZ)
+    print(dCdW)
+    print(dCdb)
+    print(dA_prev)
+    print(grads)
 
 if __name__ == "__main__":
 
