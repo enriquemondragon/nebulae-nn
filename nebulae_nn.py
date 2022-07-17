@@ -86,7 +86,9 @@ def define_layers_prop(dataset, layers_dim, activation):
     for l in range(1, len(dim_layers)):
         glorot_min = -1 / np.sqrt(dim_layers[l-1]), 
         glorot_max = 1 / np.sqrt(dim_layers[l-1])
-        params['W' + str(l)] = glorot_min + np.random.randn(dim_layers[l], dim_layers[l-1]) * (glorot_max - glorot_min)
+        #params['W' + str(l)] = glorot_min + np.random.randn(dim_layers[l], dim_layers[l-1]) * (glorot_max - glorot_min)
+        params['W' + str(l)] = np.random.randn(dim_layers[l], dim_layers[l-1]) * glorot_max *0.5
+        #params['W' + str(l)] = np.random.randn(dim_layers[l], dim_layers[l-1]) *0.1
         params['b' + str(l)] = np.zeros((dim_layers[l], 1))
         print('\tDimensions for layer', l)
         print('\tweight matrix: ', params['W' + str(l)].shape)
@@ -101,17 +103,16 @@ def define_layers_prop(dataset, layers_dim, activation):
 
 
 def forward_prop(X, params, dim_layers, activation):
+    '''
+    Computes forward propagation
+    '''
     A = X
     cache = {}
     cache['A' + str(0)] = A
     for l in range(1, len(dim_layers)):
         A_prev = A
-        
         Z = linear_forward(A_prev,params['W' + str(l)], params['b' + str(l)])
-        #print("layer", l, "params: ", params['W' + str(l)], params['b' + str(l)])
         cache['Z' + str(l)] = Z
-        #print(Z)
-        #print(l)
         if activation[l-1]=='sigmoid':
             A = sigmoid(Z)
         elif activation[l-1]=='relu':
@@ -123,30 +124,45 @@ def forward_prop(X, params, dim_layers, activation):
         
 def cost(A,Y):
     '''
-    Compute the cost of the loss function
+    Compute the cost of the objective function
     '''
     m = Y.shape[0]
-    #print(m)
     C = np.squeeze(binary_cross_entropy(m,A,Y))
     return C
 
-def backward_prop(A,Y, cache, params):
+def backward_prop(A,Y, cache, params, activation):
     '''
-    Computes the Jacobians elements of the loss function
+    Computes the Jacobian's elements of the loss function
     '''
     grads = {}
     L = round((len(cache)-1)/2)
-    print(L)
     dCdA = d_binary_cross_entropy(cache['A'+str(L)],Y)
-    dAdZ = d_sigmoid(cache['Z'+str(L)])
-    dCdZ = dCdA * dAdZ
-    #print("shapes dcdz and daprev", dCdZ.shape, cache['A'+str(L-1)].shape)
-    dA_prev, dCdW, dCdb = linear_backward(dCdZ,cache['A'+str(L-1)], params['W' + str(L)], params['b' + str(L)]) # I will use params, CHECK
-    grads["dA" + str(L-1)], grads["dW" + str(L)], grads["db" + str(L)] = dA_prev, dCdW, dCdb
 
-    #d_sigmoid(X)
-    #dZ = relu_backward(dA, activation_cache)
-    return dCdA,dCdZ,dCdW,dCdb,dA_prev,grads
+    for l in reversed(range(1,L+1)):
+        if activation[l-1]=='sigmoid':
+            dAdZ = d_sigmoid(cache['Z'+str(l)])
+        elif activation[l-1]=='relu':
+            dAdZ = d_relu(cache['Z'+str(l)],dCdA)
+        elif activation[l-1]=='tanh':
+            dAdZ = d_tanh(cache['Z'+str(l)])
+
+        dCdZ = dCdA * dAdZ
+
+        grads["dA" + str(l-1)], grads["dW" + str(l)], grads["db" + str(l)] = linear_backward(dCdZ,cache['A'+str(l-1)], params['W' + str(l)], params['b' + str(l)]) # I will use params, CHECK
+        dCdA = grads["dA" + str(l-1)]
+
+    return grads
+
+def update_params(params, grads, alpha):
+    '''
+    update parameters
+    '''
+    L = len(params) // 2
+    for l in range(1,L+1):
+        params["W" + str(l)] = params["W" + str(l)] - alpha * grads["dW" + str(l)]
+        params["b" + str(l)] = params["b" + str(l)] - alpha * grads["db" + str(l)]
+    return params
+
 
 def main():
     parser = argparse.ArgumentParser(description=' ################ Nebulae NN ################', usage='%(prog)s')
@@ -163,24 +179,23 @@ def main():
     assert len(Y)==dataset.shape[1], 'Number of samples does not match with number of labels'
 
     dim_layers, params, activations = define_layers_prop(dataset, args.dim_layers, args.activation)
-    #print("params keys are: ", params.keys())
+
     X = dataset # split in future
-    A, cache = forward_prop(X, params, dim_layers, activations)
-    #print(A)
-    print(cache.keys())
-    #print(cache)
-    #print(params)
-    C = cost(A,Y)
-    print(C)
-    #print("A IS", A)
-    #print("A CACHE IS", cache['A3'])
-    dCdA,dCdZ,dCdW, dCdb,dA_prev, grads = backward_prop(A,Y,cache, params)
-    print(dCdA)
-    print(dCdZ)
-    print(dCdW)
-    print(dCdb)
-    print(dA_prev)
-    print(grads)
+
+
+    alpha = 0.0075
+    iterations=3000
+    for i in range(iterations):
+        print("iteration",i)
+        A, cache = forward_prop(X, params, dim_layers, activations)
+        C = cost(A,Y)
+        print("cost is",C)
+        grads = backward_prop(A,Y,cache, params, activations)
+
+        params = update_params(params, grads, alpha)
+
+
+
 
 if __name__ == "__main__":
 
