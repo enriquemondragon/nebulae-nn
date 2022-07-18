@@ -184,8 +184,8 @@ def main():
 
 
     alpha = 0.0075
-    iterations=3000
-    for i in range(iterations):
+    epochs=3000
+    for i in range(epochs):
         print("iteration",i)
         A, cache = forward_prop(X, params, dim_layers, activations)
         C = cost(A,Y)
