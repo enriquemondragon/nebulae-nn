@@ -59,13 +59,16 @@ def read_data(data_path):
 
     return dataset
 
+
 def read_labels(labels_file):
     '''
     Extracting label values
     '''
     labels = pd.read_csv(labels_file).values
     Y = np.array(labels[:,1])
+
     return Y
+
 
 def define_layers_prop(dataset, layers_dim, activation):
     '''
@@ -86,8 +89,8 @@ def define_layers_prop(dataset, layers_dim, activation):
     for l in range(1, len(dim_layers)):
         glorot_min = -1 / np.sqrt(dim_layers[l-1]), 
         glorot_max = 1 / np.sqrt(dim_layers[l-1])
-        #params['W' + str(l)] = glorot_min + np.random.randn(dim_layers[l], dim_layers[l-1]) * (glorot_max - glorot_min)
-        params['W' + str(l)] = np.random.randn(dim_layers[l], dim_layers[l-1]) * glorot_max *0.5
+        params['W' + str(l)] = glorot_min + np.random.randn(dim_layers[l], dim_layers[l-1]) * (glorot_max - glorot_min)
+        #params['W' + str(l)] = np.random.randn(dim_layers[l], dim_layers[l-1]) * glorot_max *0.5
         #params['W' + str(l)] = np.random.randn(dim_layers[l], dim_layers[l-1]) *0.1
         params['b' + str(l)] = np.zeros((dim_layers[l], 1))
         print('\tDimensions for layer', l)
@@ -120,8 +123,10 @@ def forward_prop(X, params, dim_layers, activation):
         elif activation[l-1]=='tanh':
             A = tanh(Z)
         cache['A' + str(l)] = A
+
     return A, cache
-        
+
+
 def cost(A,Y):
     '''
     Compute the cost of the objective function
@@ -130,6 +135,7 @@ def cost(A,Y):
     C = np.squeeze(binary_cross_entropy(m,A,Y))
     return C
 
+
 def backward_prop(A,Y, cache, params, activation):
     '''
     Computes the Jacobian's elements of the loss function
@@ -137,21 +143,23 @@ def backward_prop(A,Y, cache, params, activation):
     grads = {}
     L = round((len(cache)-1)/2)
     dCdA = d_binary_cross_entropy(cache['A'+str(L)],Y)
-
+    dA_da = dCdA
     for l in reversed(range(1,L+1)):
+
         if activation[l-1]=='sigmoid':
             dAdZ = d_sigmoid(cache['Z'+str(l)])
         elif activation[l-1]=='relu':
-            dAdZ = d_relu(cache['Z'+str(l)],dCdA)
+            dAdZ = d_relu(cache['Z'+str(l)],dA_da)
         elif activation[l-1]=='tanh':
             dAdZ = d_tanh(cache['Z'+str(l)])
 
-        dCdZ = dCdA * dAdZ
+        dCdZ = dCdA * dA_da *dAdZ
 
-        grads["dA" + str(l-1)], grads["dW" + str(l)], grads["db" + str(l)] = linear_backward(dCdZ,cache['A'+str(l-1)], params['W' + str(l)], params['b' + str(l)]) # I will use params, CHECK
-        dCdA = grads["dA" + str(l-1)]
-
+        grads["dA" + str(l-1)], grads["dW" + str(l)], grads["db" + str(l)] = linear_backward(dCdZ,cache['A'+str(l-1)], params['W' + str(l)], params['b' + str(l)])
+        dA_da = grads["dA" + str(l-1)] 
+    
     return grads
+
 
 def update_params(params, grads, alpha):
     '''
@@ -161,6 +169,7 @@ def update_params(params, grads, alpha):
     for l in range(1,L+1):
         params["W" + str(l)] = params["W" + str(l)] - alpha * grads["dW" + str(l)]
         params["b" + str(l)] = params["b" + str(l)] - alpha * grads["db" + str(l)]
+
     return params
 
 
@@ -179,22 +188,18 @@ def main():
     assert len(Y)==dataset.shape[1], 'Number of samples does not match with number of labels'
 
     dim_layers, params, activations = define_layers_prop(dataset, args.dim_layers, args.activation)
-
+    print(params.keys())
     X = dataset # split in future
 
-
-    alpha = 0.0075
+    alpha = 0.001
     epochs=3000
     for i in range(epochs):
-        print("iteration",i)
         A, cache = forward_prop(X, params, dim_layers, activations)
         C = cost(A,Y)
-        print("cost is",C)
+        print("epoch : ", i, "\tcost:",C)
         grads = backward_prop(A,Y,cache, params, activations)
 
         params = update_params(params, grads, alpha)
-
-
 
 
 if __name__ == "__main__":
