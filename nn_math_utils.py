@@ -67,7 +67,7 @@ def binary_cross_entropy(m,A_uc,Y):
 
 def d_binary_cross_entropy(A_uc,Y):
     A = clipping(A_uc)
-    dCdA = - (Y / A) - ((1 - Y) / (1 - A))
+    dCdA = - (Y / A) + ((1 - Y) / (1 - A))
 
     return dCdA
     
