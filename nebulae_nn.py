@@ -152,8 +152,19 @@ def backward_prop(A,Y, cache, params, activation):
             dAdZ = d_relu(cache['Z'+str(l)],dA_da)
         elif activation[l-1]=='tanh':
             dAdZ = d_tanh(cache['Z'+str(l)])
-
-        dCdZ = dCdA * dA_da *dAdZ
+        
+        #dCdZ = dA_da * dAdZ
+        #print("l is", l)
+        #'''
+        if L==3:
+            dCdZ = dCdA * dAdZ
+        elif L==2:
+            dCdZ = grads["dA" + str(l)]  * dAdZ
+        
+        elif L==1:
+            dCdZ = dCdA *grads["dA" + str(l)]  * grads["dA" + str(l+1)] * dAdZ
+        #'''    
+        #dCdZ = dCdA * dA_da * dAdZ
 
         grads["dA" + str(l-1)], grads["dW" + str(l)], grads["db" + str(l)] = linear_backward(dCdZ,cache['A'+str(l-1)], params['W' + str(l)], params['b' + str(l)])
         dA_da = grads["dA" + str(l-1)] 
@@ -177,7 +188,7 @@ def main():
     parser = argparse.ArgumentParser(description=' ################ Nebulae NN ################', usage='%(prog)s')
     parser.add_argument('-ind', '--input_data', type=str, required=True, help='dataset path', dest='data_path')
     parser.add_argument('-lb', '--labels', type=str, required=True, help='labels csv file', dest='labels_file')
-    parser.add_argument('-dim', '--dim_layers', action='store', nargs='+', default=[16,8,1], type=int, help='dim of layers separated with spaces', dest='dim_layers')
+    parser.add_argument('-dim', '--dim_layers', action='store', nargs='+', default=[5,5,1], type=int, help='dim of layers separated with spaces', dest='dim_layers') #try 5,5,1 instead of 16,8,1
     parser.add_argument('-act', '--activation', type=str, choices=['sigmoid', 'relu', 'tanh'], default='relu', dest='activation', help='select activation function for inner layers [sigmoid, relu, tanh]')
     args = parser.parse_args()
 
@@ -191,7 +202,7 @@ def main():
     print(params.keys())
     X = dataset # split in future
 
-    alpha = 0.001
+    alpha = 0.1
     epochs=3000
     for i in range(epochs):
         A, cache = forward_prop(X, params, dim_layers, activations)
