@@ -143,7 +143,7 @@ def backward_prop(A,Y, cache, params, activation):
     grads = {}
     L = round((len(cache)-1)/2)
     dCdA = d_binary_cross_entropy(cache['A'+str(L)],Y)
-    dA_da = dCdA
+    dA_da = np.ones_like(dCdA) # intialize 
     for l in reversed(range(1,L+1)):
 
         if activation[l-1]=='sigmoid':
@@ -152,19 +152,17 @@ def backward_prop(A,Y, cache, params, activation):
             dAdZ = d_relu(cache['Z'+str(l)],dA_da)
         elif activation[l-1]=='tanh':
             dAdZ = d_tanh(cache['Z'+str(l)])
-        
-        #dCdZ = dA_da * dAdZ
-        #print("l is", l)
-        #'''
-        if L==3:
+
+        if l == L:
             dCdZ = dCdA * dAdZ
-        elif L==2:
-            dCdZ = grads["dA" + str(l)]  * dAdZ
-        
-        elif L==1:
-            dCdZ = dCdA *grads["dA" + str(l)]  * grads["dA" + str(l+1)] * dAdZ
-        #'''    
-        #dCdZ = dCdA * dA_da * dAdZ
+        else:
+            th = L-1
+            i = l
+            dA_acum = 1 # initialize
+            while i <= th:
+                dA_acum *= grads["dA" + str(i)]
+                i += 1
+            dCdZ = dA_acum * dAdZ
 
         grads["dA" + str(l-1)], grads["dW" + str(l)], grads["db" + str(l)] = linear_backward(dCdZ,cache['A'+str(l-1)], params['W' + str(l)], params['b' + str(l)])
         dA_da = grads["dA" + str(l-1)] 
