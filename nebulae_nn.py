@@ -143,7 +143,7 @@ def backward_prop(A,Y, cache, params, activation):
     grads = {}
     L = round((len(cache)-1)/2)
     dCdA = d_binary_cross_entropy(cache['A'+str(L)],Y)
-    dA_da = np.ones_like(dCdA) # intialize 
+    dA_da = np.ones_like(dCdA) 
     for l in reversed(range(1,L+1)):
 
         if activation[l-1]=='sigmoid':
@@ -153,16 +153,7 @@ def backward_prop(A,Y, cache, params, activation):
         elif activation[l-1]=='tanh':
             dAdZ = d_tanh(cache['Z'+str(l)])
 
-        if l == L:
-            dCdZ = dCdA * dAdZ
-        else:
-            th = L-1
-            i = l
-            dA_acum = 1 # initialize
-            while i <= th:
-                dA_acum *= grads["dA" + str(i)]
-                i += 1
-            dCdZ = dA_acum * dAdZ
+        dCdZ = dCdA * dA_da * dAdZ
 
         grads["dA" + str(l-1)], grads["dW" + str(l)], grads["db" + str(l)] = linear_backward(dCdZ,cache['A'+str(l-1)], params['W' + str(l)], params['b' + str(l)])
         dA_da = grads["dA" + str(l-1)] 
@@ -181,13 +172,29 @@ def update_params(params, grads, alpha):
 
     return params
 
+def training(X, Y, params, alpha, epochs, dim_layers, activations):
+    '''
+    perform forward and backward propagation
+    '''
+    for i in range(epochs):
+        A, cache = forward_prop(X, params, dim_layers, activations)
+        C = cost(A,Y)
+        print("epoch : ", i, "\tcost:",C)
+        grads = backward_prop(A,Y,cache, params, activations)
+
+        params = update_params(params, grads, alpha)
+    model = params
+    return model
+    
 
 def main():
     parser = argparse.ArgumentParser(description=' ################ Nebulae NN ################', usage='%(prog)s')
     parser.add_argument('-ind', '--input_data', type=str, required=True, help='dataset path', dest='data_path')
     parser.add_argument('-lb', '--labels', type=str, required=True, help='labels csv file', dest='labels_file')
-    parser.add_argument('-dim', '--dim_layers', action='store', nargs='+', default=[5,5,1], type=int, help='dim of layers separated with spaces', dest='dim_layers') #try 5,5,1 instead of 16,8,1
+    parser.add_argument('-dim', '--dim_layers', action='store', nargs='+', default=[16,8,1], type=int, help='dim of layers separated with spaces', dest='dim_layers') 
     parser.add_argument('-act', '--activation', type=str, choices=['sigmoid', 'relu', 'tanh'], default='relu', dest='activation', help='select activation function for inner layers [sigmoid, relu, tanh]')
+    parser.add_argument('-a', '--alpha', type=float, action='store', default=0.1, dest='alpha', help='value at which the parameters will be updated (learning rate)')
+    parser.add_argument('-e', '--epochs', type=int, action='store', default=100, dest='epochs', help='number of complete forward - backward propagation cycles')
     args = parser.parse_args()
 
     print('\n\t',parser.description)
@@ -200,16 +207,7 @@ def main():
     print(params.keys())
     X = dataset # split in future
 
-    alpha = 0.1
-    epochs=3000
-    for i in range(epochs):
-        A, cache = forward_prop(X, params, dim_layers, activations)
-        C = cost(A,Y)
-        print("epoch : ", i, "\tcost:",C)
-        grads = backward_prop(A,Y,cache, params, activations)
-
-        params = update_params(params, grads, alpha)
-
+    model = training(X, Y, params, args.alpha, args.epochs, dim_layers, activations)
 
 if __name__ == "__main__":
 
