@@ -7,6 +7,8 @@ import os
 import sys
 from PIL import Image
 import pandas as pd
+import matplotlib.pyplot as plt
+import csv
 from nn_math_utils import *
  
 def read_data(data_path):
@@ -176,16 +178,47 @@ def training(X, Y, params, alpha, epochs, dim_layers, activations):
     '''
     perform forward and backward propagation
     '''
+    history = []
     for i in range(epochs):
         A, cache = forward_prop(X, params, dim_layers, activations)
         C = cost(A,Y)
         print("epoch : ", i, "\tcost:",C)
+        history.append(C)
         grads = backward_prop(A,Y,cache, params, activations)
 
         params = update_params(params, grads, alpha)
     model = params
-    return model
+    return model, history
+
+
+def save_model(model, epochs, history):
+    '''
+    Saves model to a csv file
+    and plots the training
+    '''
+    dir = r"./models"
+    if not os.path.exists(dir):
+        print("\ncreating output directory...")
+        os.mkdir(dir)
+
+    model_path = os.path.join(dir, 'model' + '.csv')
+    temp = csv.writer(open(model_path, "w"))
+    print("\nWriting model...")
+    for key, val in model.items():
+        temp.writerow([key, val])
+    print("model saved!")
+
+    plt.style.use('ggplot')
+    plt.plot(range(0,epochs), history)
+    plt.xlabel('Epochs')
+    plt.ylabel('Cost')
+    plt.title('Nebulae nn: Training')
+    plt.grid(True)
     
+    plot_path = os.path.join(dir, 'training' + '.png')
+    plt.savefig(plot_path)
+    plt.show()
+
 
 def main():
     parser = argparse.ArgumentParser(description=' ################ Nebulae NN ################', usage='%(prog)s')
@@ -207,7 +240,9 @@ def main():
     print(params.keys())
     X = dataset # split in future
 
-    model = training(X, Y, params, args.alpha, args.epochs, dim_layers, activations)
+    model, history = training(X, Y, params, args.alpha, args.epochs, dim_layers, activations)
+
+    save_model(model, args.epochs, history)
 
 if __name__ == "__main__":
 
