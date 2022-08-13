@@ -3,7 +3,7 @@ import warnings
 
 def sigmoid(X):
     warnings.filterwarnings('ignore') #RuntimeWarning: overflow encountered in exp
-    X = np.array(X, dtype=np.float32)
+    X = np.array(X, dtype=np.float64)
     A = 1 / (1 + np.exp(-X))
 
     return A

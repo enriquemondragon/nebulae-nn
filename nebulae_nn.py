@@ -9,6 +9,7 @@ from PIL import Image
 import pandas as pd
 import matplotlib.pyplot as plt
 import csv
+import re
 from nn_math_utils import *
  
 def read_data(data_path):
@@ -57,7 +58,6 @@ def read_data(data_path):
 
     print('\nSize of dataset: ', dataset.shape[1], '\nshape of dataset',dataset.shape, '\n')
     dataset = dataset/255
-    print(dataset)
 
     return dataset
 
@@ -134,7 +134,7 @@ def cost(A,Y):
     Compute the cost of the objective function
     '''
     m = Y.shape[0]
-    C = np.squeeze(binary_cross_entropy(m,A,Y))
+    C = np.squeeze(binary_cross_entropy(m,A,Y)).astype(np.float64) # change to float 64
     return C
 
 
@@ -185,15 +185,15 @@ def training(X, Y, params, alpha, epochs, dim_layers, activations):
         print("epoch : ", i, "\tcost:",C)
         history.append(C)
         grads = backward_prop(A,Y,cache, params, activations)
-
         params = update_params(params, grads, alpha)
+        #print(grads.values())
     model = params
     return model, history
 
 
 def save_model(model, epochs, history):
     '''
-    Saves model to a csv file
+    Saves model to a npy file
     and plots the training
     '''
     dir = r"./models"
@@ -201,18 +201,16 @@ def save_model(model, epochs, history):
         print("\ncreating output directory...")
         os.mkdir(dir)
 
-    model_path = os.path.join(dir, 'model' + '.csv')
-    temp = csv.writer(open(model_path, "w"))
+    model_path = os.path.join(dir, 'model' + '.npy')
     print("\nWriting model...")
-    for key, val in model.items():
-        temp.writerow([key, val])
+    np.save(model_path,model) 
     print("model saved!")
 
     plt.style.use('ggplot')
     plt.plot(range(0,epochs), history)
     plt.xlabel('Epochs')
     plt.ylabel('Cost')
-    plt.title('Nebulae nn: Training')
+    plt.title('Nebulae NN: Training')
     plt.grid(True)
     
     plot_path = os.path.join(dir, 'training' + '.png')
@@ -220,29 +218,86 @@ def save_model(model, epochs, history):
     plt.show()
 
 
+def load_model(model_path):
+    '''
+    Load model from a npy file
+    '''
+    trained_model = np.load(model_path,allow_pickle=True)
+    L = int(len(trained_model[()].keys()) / 2)
+
+    params = {}
+    layers_dim = []
+    for l in range(1,L+1):
+        params['W' + str(l)] = trained_model[()]['W'+str(l)]
+        params['b' + str(l)] = trained_model[()]['b'+str(l)]
+        layers_dim.append(trained_model[()]['W'+str(l)].shape[0])
+
+    return params, layers_dim
+
+
+def retrieve_model(dataset, layers_dim, activation, params):
+    '''
+    Retrieve pretrained model
+    '''
+    dim_layers = []
+    dim_layers.append(dataset.shape[0])
+    for i in layers_dim:
+        dim_layers.append(i)
+
+    activations = []
+    np.random.seed(10)
+    print('\n\n\n\tRetrieving model of',len(layers_dim), 'layers\n')
+    for l in range(1, len(dim_layers)):
+        print('\tDimensions for layer', l)
+        print('\tweight matrix: ', params['W' + str(l)].shape)
+        print('\tbias vector: ', params['b' + str(l)].shape, '\n')
+        activations.append(activation)
+
+    activations[-1]='sigmoid'
+    print('\n\tactivations for each layer:\n')
+    print('\t',activations, '\n') 
+
+    return dim_layers, activations
+
+
 def main():
     parser = argparse.ArgumentParser(description=' ################ Nebulae NN ################', usage='%(prog)s')
     parser.add_argument('-ind', '--input_data', type=str, required=True, help='dataset path', dest='data_path')
-    parser.add_argument('-lb', '--labels', type=str, required=True, help='labels csv file', dest='labels_file')
+    parser.add_argument('-lb', '--labels', type=str, required=False, help='labels csv file', dest='labels_file')
     parser.add_argument('-dim', '--dim_layers', action='store', nargs='+', default=[16,8,1], type=int, help='dim of layers separated with spaces', dest='dim_layers') 
     parser.add_argument('-act', '--activation', type=str, choices=['sigmoid', 'relu', 'tanh'], default='relu', dest='activation', help='select activation function for inner layers [sigmoid, relu, tanh]')
     parser.add_argument('-a', '--alpha', type=float, action='store', default=0.1, dest='alpha', help='value at which the parameters will be updated (learning rate)')
     parser.add_argument('-e', '--epochs', type=int, action='store', default=100, dest='epochs', help='number of complete forward - backward propagation cycles')
+    parser.add_argument('-m', '--model', type=str, required=False, help='model path for making predicitions with', dest='model_path')
+
     args = parser.parse_args()
 
     print('\n\t',parser.description)
     dataset = read_data(args.data_path)
-    Y = read_labels(args.labels_file)
-    print(Y)
-    assert len(Y)==dataset.shape[1], 'Number of samples does not match with number of labels'
-
-    dim_layers, params, activations = define_layers_prop(dataset, args.dim_layers, args.activation)
-    print(params.keys())
     X = dataset # split in future
 
-    model, history = training(X, Y, params, args.alpha, args.epochs, dim_layers, activations)
+    if args.model_path:
+        # load model and predict
+        params, layers_dim = load_model(args.model_path)
+        assert len(args.activation)-1==len(layers_dim), 'Check that the number of activations mathches the number of hidden layers'
 
-    save_model(model, args.epochs, history)
+        dim_layers, activations = retrieve_model(dataset, args.dim_layers, args.activation, params)
+        A,_ = forward_prop(X, params, dim_layers, activations)
+        print(A)
+
+    else:
+        # train
+        Y = read_labels(args.labels_file)
+        print(Y)
+        assert len(Y)==dataset.shape[1], 'Number of samples does not match with number of labels'
+
+        dim_layers, params, activations = define_layers_prop(dataset, args.dim_layers, args.activation)
+        print(params.keys())
+
+        model, history = training(X, Y, params, args.alpha, args.epochs, dim_layers, activations)
+
+        save_model(model, args.epochs, history)
+    
 
 if __name__ == "__main__":
 
