@@ -1,4 +1,5 @@
 % Data preprocessing
+
 close all;
 clear all;
 clc;
@@ -13,6 +14,7 @@ imwrite(rszgs_1, '.\processed\m1_pp.jpg');
 
 %%
 % dataset processing
+
 images = dir('*.jpg');      
 n = length(images)
 
@@ -23,6 +25,7 @@ for i=1:n
    images_org{i} = curr_img;
 end
 montage(images_org)
+
 %%
 % processing
 images = dir('*.jpg');      
@@ -61,6 +64,22 @@ for i=1:n
    name_img  = erase(name_img,".jpg")
    outname = sprintf('%s_pp.jpg',name_img)
    outpath =  ['.\processed\' outname]
+   imwrite(im2uint8(rszgs_i), outpath);
+end
+montage(images_rszgs)
+
+%%
+% resize only and save
+images = dir('*.jpg');      
+n = length(images)
+for i=1:n
+   name_img = images(i).name;
+   curr_img = imread(name_img);
+   rszgs_i = imresize(curr_img, [64 64]);
+   images_rszgs{i} = rszgs_i;
+   name_img  = erase(name_img,".jpg")
+   outname = sprintf('%s_pp.jpg',name_img)
+   outpath =  ['.\processed_rsz\' outname]
    imwrite(im2uint8(rszgs_i), outpath);
 end
 montage(images_rszgs)
