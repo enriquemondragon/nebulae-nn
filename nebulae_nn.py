@@ -91,9 +91,9 @@ def define_layers_prop(dataset, layers_dim, activation):
     for l in range(1, len(dim_layers)):
         glorot_min = -1 / np.sqrt(dim_layers[l-1]), 
         glorot_max = 1 / np.sqrt(dim_layers[l-1])
-        params['W' + str(l)] = glorot_min + np.random.randn(dim_layers[l], dim_layers[l-1]) * (glorot_max - glorot_min)
-        #params['W' + str(l)] = np.random.randn(dim_layers[l], dim_layers[l-1]) * glorot_max *0.5
-        #params['W' + str(l)] = np.random.randn(dim_layers[l], dim_layers[l-1]) *0.1
+        #params['W' + str(l)] = glorot_min + np.random.randn(dim_layers[l], dim_layers[l-1]) * (glorot_max - glorot_min) # langsam
+        #params['W' + str(l)] = np.random.randn(dim_layers[l], dim_layers[l-1]) * glorot_max * 0.5 # langsam
+        params['W' + str(l)] = np.random.randn(dim_layers[l], dim_layers[l-1]) * 0.1
         params['b' + str(l)] = np.zeros((dim_layers[l], 1))
         print('\tDimensions for layer', l)
         print('\tweight matrix: ', params['W' + str(l)].shape)
@@ -134,7 +134,7 @@ def cost(A,Y):
     Compute the cost of the objective function
     '''
     m = Y.shape[0]
-    C = np.squeeze(binary_cross_entropy(m,A,Y)).astype(np.float64) # change to float 64
+    C = np.squeeze(binary_cross_entropy(m,A,Y)).astype(np.float64)
     return C
 
 
@@ -154,7 +154,7 @@ def backward_prop(A,Y, cache, params, activation):
             dAdZ = d_relu(cache['Z'+str(l)],dA_da)
         elif activation[l-1]=='tanh':
             dAdZ = d_tanh(cache['Z'+str(l)])
-
+        
         dCdZ = dCdA * dA_da * dAdZ
 
         grads["dA" + str(l-1)], grads["dW" + str(l)], grads["db" + str(l)] = linear_backward(dCdZ,cache['A'+str(l-1)], params['W' + str(l)], params['b' + str(l)])
@@ -191,7 +191,7 @@ def training(X, Y, params, alpha, epochs, dim_layers, activations):
     return model, history
 
 
-def save_model(model, epochs, history):
+def save_model(model, epochs, history, alpha):
     '''
     Saves model to a npy file
     and plots the training
@@ -202,15 +202,17 @@ def save_model(model, epochs, history):
         os.mkdir(dir)
 
     model_path = os.path.join(dir, 'model' + '.npy')
+    history_path = os.path.join(dir, 'history' + '.csv')
     print("\nWriting model...")
     np.save(model_path,model) 
+    np.savetxt(history_path, history)
     print("model saved!")
 
     plt.style.use('ggplot')
     plt.plot(range(0,epochs), history)
     plt.xlabel('Epochs')
     plt.ylabel('Cost')
-    plt.title('Nebulae NN: Training')
+    plt.title('Nebulae NN: Training\n'+'\u03B1 = '+str(alpha))
     plt.grid(True)
     
     plot_path = os.path.join(dir, 'training' + '.png')
@@ -296,7 +298,7 @@ def main():
 
         model, history = training(X, Y, params, args.alpha, args.epochs, dim_layers, activations)
 
-        save_model(model, args.epochs, history)
+        save_model(model, args.epochs, history, args.alpha)
     
 
 if __name__ == "__main__":
