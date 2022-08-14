@@ -21,7 +21,7 @@ def read_data(data_path):
     i = 0
     for image in os.listdir(data_path):
         image = image.lower()
-        if image.endswith(('.png', '.jpg', 'jpeg')) != True:
+        if image.endswith(('.png', '.jpg', '.jpeg')) != True:
             print ('\t WARNING: ignoring file ',image, ' format not supported')
         else:
             im=Image.open(data_path + image)
@@ -212,7 +212,7 @@ def save_model(model, epochs, history, alpha):
     plt.plot(range(0,epochs), history)
     plt.xlabel('Epochs')
     plt.ylabel('Cost')
-    plt.title('Nebulae NN: Training\n'+'\u03B1 = '+str(alpha))
+    plt.title('Nebulae-NN: Training\n'+'\u03B1 = '+str(alpha))
     plt.grid(True)
     
     plot_path = os.path.join(dir, 'training' + '.png')
@@ -263,13 +263,13 @@ def retrieve_model(dataset, layers_dim, activation, params):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=' ################ Nebulae NN ################', usage='%(prog)s')
-    parser.add_argument('-ind', '--input_data', type=str, required=True, help='dataset path', dest='data_path')
+    parser = argparse.ArgumentParser(description=' ################ Nebulae-NN ################', usage='%(prog)s')
+    parser.add_argument('-in', '--input', type=str, required=True, help='dataset path', dest='data_path')
     parser.add_argument('-lb', '--labels', type=str, required=False, help='labels csv file', dest='labels_file')
     parser.add_argument('-dim', '--dim_layers', action='store', nargs='+', default=[16,8,1], type=int, help='dim of layers separated with spaces', dest='dim_layers') 
     parser.add_argument('-act', '--activation', type=str, choices=['sigmoid', 'relu', 'tanh'], default='relu', dest='activation', help='select activation function for inner layers [sigmoid, relu, tanh]')
-    parser.add_argument('-a', '--alpha', type=float, action='store', default=0.1, dest='alpha', help='value at which the parameters will be updated (learning rate)')
-    parser.add_argument('-e', '--epochs', type=int, action='store', default=100, dest='epochs', help='number of complete forward - backward propagation cycles')
+    parser.add_argument('-a', '--alpha', type=float, action='store', default=0.001, dest='alpha', help='value at which the parameters will be updated (learning rate)')
+    parser.add_argument('-e', '--epochs', type=int, action='store', default=1000, dest='epochs', help='number of complete forward - backward propagation cycles')
     parser.add_argument('-m', '--model', type=str, required=False, help='model path for making predicitions with', dest='model_path')
 
     args = parser.parse_args()
