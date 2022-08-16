@@ -12,49 +12,68 @@ import csv
 import re
 from nn_math_utils import *
  
-def read_data(data_path):
+def read_data(data_path, labels_file):
     '''
     reads and preprocess the image dataset
     '''
 
     print('\nloading data...\n ')
     i = 0
-    for image in os.listdir(data_path):
-        image = image.lower()
-        if image.endswith(('.png', '.jpg', '.jpeg')) != True:
-            print ('\t WARNING: ignoring file ',image, ' format not supported')
-        else:
-            im=Image.open(data_path + image)
-            imarr = np.array(im)
-            print('\timage:\t', i, '\t', image, '\tsample shape is', imarr.shape)
-            if imarr.ndim == 3:
-                sample = np.reshape(imarr, (imarr.shape[0]*imarr.shape[1]*imarr.shape[2],1))
-                if i==0: 
-                    firstshape = imarr.shape
-                    dataset = sample
-                else: 
-                    if firstshape == imarr.shape:
-                        dataset = np.append(dataset, sample, axis=1)
-                    else:
-                        print('\n\tError: shape of image', image, 'dont match\t\n')
-                        i -= 1
-                        sys.exit
-                i += 1
-            elif imarr.ndim == 2:
-                sample = np.reshape(imarr, (imarr.shape[0]*imarr.shape[1],1))
-                if i==0: 
-                    firstshape = imarr.shape
-                    dataset = sample
-                else: 
-                    if firstshape == imarr.shape:
-                        dataset = np.append(dataset, sample, axis=1)
-                    else:
-                        print('\n\tError: shape of image', image, 'mismatch\t\n')
-                        i -= 1
-                        sys.exit
-                i += 1
+
+    if os.path.isdir(data_path):
+        images = sorted(os.listdir(data_path))
+        if labels_file != None:
+            images = pd.read_csv(labels_file).values[:,0]
+    
+        for image in images:
+            image = image.lower()
+            if image.endswith(('.png', '.jpg', '.jpeg')) != True:
+                print ('\t WARNING: ignoring file ',image, ' format not supported')
             else:
-                print('\tError: Check dimensions of the data')
+                im=Image.open(data_path + image)
+                imarr = np.array(im)
+                print('\timage:\t', i+1, '\t', image, '\tsample shape is', imarr.shape)
+                if imarr.ndim == 3:
+                    sample = np.reshape(imarr, (imarr.shape[0]*imarr.shape[1]*imarr.shape[2],1))
+                    if i==0: 
+                        firstshape = imarr.shape
+                        dataset = sample
+                    else: 
+                        if firstshape == imarr.shape:
+                            dataset = np.append(dataset, sample, axis=1)
+                        else:
+                            print('\n\tError: shape of image', image, 'does not match\t\n')
+                            i -= 1
+                            sys.exit
+                    i += 1
+                elif imarr.ndim == 2:
+                    sample = np.reshape(imarr, (imarr.shape[0]*imarr.shape[1],1))
+                    if i==0: 
+                        firstshape = imarr.shape
+                        dataset = sample
+                    else: 
+                        if firstshape == imarr.shape:
+                            dataset = np.append(dataset, sample, axis=1)
+                        else:
+                            print('\n\tError: shape of image', image, 'mismatch\t\n')
+                            i -= 1
+                            sys.exit
+                    i += 1
+                else:
+                    print('\tError: Check dimensions of the data')
+
+    elif os.path.isfile(data_path):
+        if data_path.endswith(('.png', '.jpg', '.jpeg')) != True:
+            print ('\t WARNING: ignoring file ',data_path, ' format not supported')
+        else:
+            im = Image.open(data_path)
+            imarr = np.array(im)
+            print('\timage:\t', str(1), '\t', data_path, '\tsample shape is', imarr.shape)
+            if imarr.ndim == 3:
+                    sample = np.reshape(imarr, (imarr.shape[0]*imarr.shape[1]*imarr.shape[2],1))
+            else:
+                print('\n\tError: shape of image', data_path, 'does not match\t\n')
+            dataset = sample
 
     print('\nSize of dataset: ', dataset.shape[1], '\nshape of dataset',dataset.shape, '\n')
     dataset = dataset/255
@@ -179,16 +198,24 @@ def training(X, Y, params, alpha, epochs, dim_layers, activations):
     perform forward and backward propagation
     '''
     history = []
+    best_cost = 1000 # arbitrary large
+    best_epoch = 0
+    model_best = params
     for i in range(epochs):
         A, cache = forward_prop(X, params, dim_layers, activations)
         C = cost(A,Y)
-        print("epoch : ", i, "\tcost:",C)
         history.append(C)
         grads = backward_prop(A,Y,cache, params, activations)
         params = update_params(params, grads, alpha)
-        #print(grads.values())
-    model = params
-    return model, history
+        if C < best_cost:
+            model_best = params
+            best_cost = C
+            best_epoch = i
+            print("epoch : ", i, "\tcost:", C, '\t - Current best model')
+        else:
+            print("epoch : ", i, "\tcost:", C)
+    print('\nBest model summary:\n Epoch: ',best_epoch,'Cost: ',best_cost)
+    return model_best, history
 
 
 def save_model(model, epochs, history, alpha):
@@ -275,7 +302,7 @@ def main():
     args = parser.parse_args()
 
     print('\n\t',parser.description)
-    dataset = read_data(args.data_path)
+    dataset = read_data(args.data_path, args.labels_file)
     X = dataset # split in future
 
     if args.model_path:
@@ -294,7 +321,7 @@ def main():
         assert len(Y)==dataset.shape[1], 'Number of samples does not match with number of labels'
 
         dim_layers, params, activations = define_layers_prop(dataset, args.dim_layers, args.activation)
-        print(params.keys())
+        print(params.keys(),'\n')
 
         model, history = training(X, Y, params, args.alpha, args.epochs, dim_layers, activations)
 

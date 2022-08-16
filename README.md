@@ -38,8 +38,8 @@ To test the model you can just simply enter the folder with the data you want to
 ```
 --------
 ## Status
-Currently. nebulae-nn only performs binary classification using binary cross entropy function and updates the parameters via gradient descent.
-For the future, more objective functions can be added, as well as different optimization algorithms.
+Currently, nebulae-nn only performs binary classification using binary cross entropy as the loss function and updates the parameters via gradient descent.
+In the future, more objective functions can be added, as well as different optimization algorithms.
 
 --------
 ## Author
