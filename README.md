@@ -52,3 +52,7 @@ Mail: emondra99@gmail.com
 This project was inspired by the specializations:
 - NG, A., Mourri, Y. B., Katanforoosh, K. (n.d.). *Deep Learning Specialization*. Coursera. https://www.coursera.org/specializations/deep-learning
 - Dye, D., Cooper S. J., Deisenroth M. P., Page, A.F. (n.d.). *Mathematics for Machine Learning Specialization*. Coursera. https://www.coursera.org/specializations/mathematics-machine-learning
+
+--------
+## License
+Nebulae-NN is available under the MIT license. See the LICENSE file for more info.
