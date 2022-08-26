@@ -1,4 +1,5 @@
 datasets/
 __pycache__/
 commands.md
-models/
+models/bu_models
+models/new*
