@@ -36,7 +36,6 @@ def read_data(data_path, labels_file):
 
     print('\nloading data...\n ')
     i = 0
-
     if os.path.isdir(data_path):
         images = sorted(os.listdir(data_path))
         if labels_file != None:
