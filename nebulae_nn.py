@@ -36,6 +36,7 @@ def read_data(data_path, labels_file):
 
     print('\nloading data...\n ')
     i = 0
+    data_names =[]
     if os.path.isdir(data_path):
         images = sorted(os.listdir(data_path))
         if labels_file != None:
@@ -49,6 +50,7 @@ def read_data(data_path, labels_file):
                 im=Image.open(data_path + image)
                 imarr = np.array(im)
                 print('\timage:\t', i+1, '\t', image, '\tsample shape is', imarr.shape)
+                data_names.append(image)
                 if imarr.ndim == 3:
                     sample = np.reshape(imarr, (imarr.shape[0]*imarr.shape[1]*imarr.shape[2],1))
                     if i==0: 
@@ -85,6 +87,7 @@ def read_data(data_path, labels_file):
             im = Image.open(data_path)
             imarr = np.array(im)
             print('\timage:\t', str(1), '\t', data_path, '\tsample shape is', imarr.shape)
+            data_names.append(data_path)
             if imarr.ndim == 3:
                     sample = np.reshape(imarr, (imarr.shape[0]*imarr.shape[1]*imarr.shape[2],1))
             else:
@@ -94,7 +97,7 @@ def read_data(data_path, labels_file):
     print('\nSize of dataset: ', dataset.shape[1], '\nshape of dataset',dataset.shape, '\n')
     dataset = dataset/255
 
-    return dataset
+    return dataset, data_names
 
 
 def read_labels(labels_file):
@@ -209,29 +212,47 @@ def update_params(params, grads, alpha):
 
     return params
 
-def training(X, Y, params, alpha, epochs, dim_layers, activations):
-    '''
-    perform forward and backward propagation
-    '''
-    history = []
-    best_cost = 1000 # arbitrary large
-    best_epoch = 0
-    model_best = params
-    for i in range(epochs):
-        A, cache = forward_prop(X, params, dim_layers, activations)
-        C = cost(A,Y)
-        history.append(C)
-        grads = backward_prop(A,Y,cache, params, activations)
-        params = update_params(params, grads, alpha)
-        if C < best_cost:
-            model_best = params
-            best_cost = C
-            best_epoch = i
-            print("epoch : ", i, "\tcost:", C, '\t - Current best model')
-        else:
-            print("epoch : ", i, "\tcost:", C)
-    print('\nBest model summary:\n Epoch: ',best_epoch,'Cost: ',best_cost)
-    return model_best, history
+
+class Nebulae_NN:
+
+    def __init__(self, X, params, dim_layers, activations):
+
+        self.X = X
+        self.params = params
+        self.dim_layers = dim_layers
+        self.activations = activations
+
+
+    def train(self, Y, alpha, epochs):
+        '''
+        perform forward and backward propagation
+        '''
+        history = []
+        best_cost = 1000 # arbitrary large
+        best_epoch = 0
+        model_best = self.params
+        for i in range(epochs):
+            A, cache = forward_prop(self.X, self.params, self.dim_layers, self.activations)
+            C = cost(A, Y)
+            history.append(C)
+            grads = backward_prop(A, Y, cache, self.params, self.activations)
+            self.params = update_params(self.params, grads, alpha)
+            if C < best_cost:
+                model_best = self.params
+                best_cost = C
+                best_epoch = i
+                print("epoch : ", i, "\tcost:", C, '\t - Current best model')
+            else:
+                print("epoch : ", i, "\tcost:", C)
+        print('\nBest model summary:\n Epoch: ',best_epoch,'Cost: ',best_cost)
+        return model_best, history
+
+    
+    def predict(self):
+        '''
+        makes a prediction for the input data with the trained model
+        '''
+        return forward_prop(self.X, self.params, self.dim_layers, self.activations)
 
 
 def save_model(model, epochs, history, alpha):
@@ -318,7 +339,7 @@ def main():
     args = parser.parse_args()
 
     print('\n\t',parser.description)
-    dataset = read_data(args.data_path, args.labels_file)
+    dataset, data_names = read_data(args.data_path, args.labels_file)
     X = dataset # split in future
 
     if args.model_path:
@@ -327,8 +348,11 @@ def main():
         assert len(args.activation)-1==len(layers_dim), 'Check that the number of activations mathches the number of hidden layers'
 
         dim_layers, activations = retrieve_model(dataset, args.dim_layers, args.activation, params)
-        A,_ = forward_prop(X, params, dim_layers, activations)
-        print(A)
+        model = Nebulae_NN(X, params, dim_layers, activations)
+        A,_ = model.predict()
+
+        for image in range(len(data_names)):
+            print('Image: ', data_names[image], '\tPrediction: ',A[0,image])
 
     else:
         # train
@@ -339,7 +363,8 @@ def main():
         dim_layers, params, activations = define_layers_prop(dataset, args.dim_layers, args.activation)
         print(params.keys(),'\n')
 
-        model, history = training(X, Y, params, args.alpha, args.epochs, dim_layers, activations)
+        model = Nebulae_NN(X, params, dim_layers, activations)
+        model, history = model.train(Y, args.alpha, args.epochs)
 
         save_model(model, args.epochs, history, args.alpha)
     
